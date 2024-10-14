@@ -103,7 +103,28 @@ const AddLottery = () => {
       setError("Network error. Please try again later.");
     }
   };
+  const getCurrentTimeGMTPlus7 = () => {
+    const now = new Date();
+  
+    // Get UTC hours, minutes, and seconds
+    const utcHours = now.getUTCHours();
+    const utcMinutes = now.getUTCMinutes();
+    const utcSeconds = now.getUTCSeconds();
+  
+    // Adjust for GMT+7
+    const hours = (utcHours + 7) % 24; // Use modulo 24 to wrap around if necessary
+    const minutes = utcMinutes;
+    const seconds = utcSeconds;
+  
+    // Format hours, minutes, and seconds
+    const formattedHours = String(hours).padStart(2, '0');
+    const formattedMinutes = String(minutes).padStart(2, '0');
+    const formattedSeconds = String(seconds).padStart(2, '0');
+  
+    return `${formattedHours}:${formattedMinutes}:${formattedSeconds}`; // Return formatted time
+  };
 
+  const currentTime = getCurrentTimeGMTPlus7();
 
   useEffect(() => {
     if (!localStorage.getItem("User")) {
@@ -150,16 +171,23 @@ const AddLottery = () => {
                       value={activeSchedule}
                       disabled={lotteryId !== ""}
                     >
-                      <option>Select Schedule</option>
+                      <option value="">Select Schedule</option>
                       {schedules.map((schedule, scheduleIndex) => {
+                        // Disable if the schedule's time has already passed
+                        const isDisabled = new Date(`2024-10-14T${schedule.time}`) < new Date();
                         return (
-                          <option value={schedule._id} key={scheduleIndex}>
-                            {schedule.name}
+                          <option
+                            value={schedule._id}
+                            key={scheduleIndex}
+                            disabled={isDisabled}
+                          >
+                            {schedule.name} - {schedule.time} - {currentTime}
                           </option>
                         );
                       })}
                     </select>
                   </td>
+
                   <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                     {schedules.find(
                       (schedule) => schedule._id === activeSchedule
