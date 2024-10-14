@@ -93,6 +93,8 @@ const AddLottery = () => {
       const lotteries = await response.json();
 
       if (response.ok) {
+        // Sort lotteries by date in descending order
+        lotteries.sort((a, b) => new Date(b.date) - new Date(a.date));
         setLotteryData(lotteries);
       } else {
         setError(lotteries.message || "Failed to fetch today's lotteries.");
@@ -101,6 +103,7 @@ const AddLottery = () => {
       setError("Network error. Please try again later.");
     }
   };
+
 
   useEffect(() => {
     if (!localStorage.getItem("User")) {
