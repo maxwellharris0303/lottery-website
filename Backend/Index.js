@@ -168,6 +168,24 @@ app.get("/schedules", verifyToken, async (req, res) => {
   }
 });
 
+//Delete schedule (authenticated, admin)
+app.delete("/delete-schedule/:_id", verifyToken, async (req, res) => {
+  if (req.user.userRole !== "admin") {
+    res.status(403).json({ error: "Not allowed" });
+  }
+  try {
+    const result = await Schedule.deleteOne({ _id: req.params._id });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: "Schedule not found" });
+    }
+    await Log.deleteMany({ schedule: req.params._id });
+    await Lottery.deleteMany({ schedule: req.params._id });
+    res.status(200).json({ message: "Schedule deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Schedule deletion failed" });
+  }
+});
+
 // Update schedule by ID (authenticated, admin)
 app.put("/update-schedule/:_id", verifyToken, async (req, res) => {
   if (req.user.userRole !== "admin") {

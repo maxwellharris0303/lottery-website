@@ -81,6 +81,33 @@ export default function Home() {
     }
   };
 
+  const deleteSchedule = async (id) => {
+    const token = JSON.parse(localStorage.getItem("Token"));
+    if (!token) {
+      Router.push("/Login");
+    }
+
+    try {
+      const response = await fetch(`${SERVER_URL}/delete-schedule/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        getSchedule();
+      } else {
+        const data = await response.json();
+        setError(data.message || "Failed to delete the schedule.");
+      }
+    } catch (error) {
+      console.error("Error deleting schedule:", error);
+      setError("An error occurred while deleting the schedule.");
+    }
+  };
+
   useEffect(() => {
     getUser();
     getSchedule();
@@ -168,6 +195,12 @@ export default function Home() {
                           className="text-white bg-green-700 px-5 py-2.5"
                         >
                           Update
+                        </button>
+                        <button
+                          onClick={() => deleteSchedule(item._id)}
+                          className="text-white bg-red-700 px-5 py-2.5 ml-2"
+                        >
+                          Delete
                         </button>
                       </td>
                     )}
