@@ -12,6 +12,7 @@ const AddLottery = () => {
   const [activeSchedule, setActiveSchedule] = useState("");
   const [lotteryData, setLotteryData] = useState([]);
   const [lotteryId, setLotteryId] = useState("");
+  const [disabledSchedules, setDisabledSchedules] = useState({});
 
   const handleInputChange = (prizeIndex, value) => {
     const updatedData = [...data];
@@ -93,8 +94,6 @@ const AddLottery = () => {
       const lotteries = await response.json();
 
       if (response.ok) {
-        // Sort lotteries by date in descending order
-        lotteries.sort((a, b) => new Date(b.date) - new Date(a.date));
         setLotteryData(lotteries);
       } else {
         setError(lotteries.message || "Failed to fetch today's lotteries.");
@@ -103,28 +102,36 @@ const AddLottery = () => {
       setError("Network error. Please try again later.");
     }
   };
-  const getCurrentTimeGMTPlus7 = () => {
-    const now = new Date();
-  
-    // Get UTC hours, minutes, and seconds
-    const utcHours = now.getUTCHours();
-    const utcMinutes = now.getUTCMinutes();
-    const utcSeconds = now.getUTCSeconds();
-  
-    // Adjust for GMT+7
-    const hours = (utcHours + 7) % 24; // Use modulo 24 to wrap around if necessary
-    const minutes = utcMinutes;
-    const seconds = utcSeconds;
-  
-    // Format hours, minutes, and seconds
-    const formattedHours = String(hours).padStart(2, '0');
-    const formattedMinutes = String(minutes).padStart(2, '0');
-    const formattedSeconds = String(seconds).padStart(2, '0');
-  
-    return `${formattedHours}:${formattedMinutes}:${formattedSeconds}`; // Return formatted time
+
+  const checkDisabledSchedules = async () => {
+    const disabledState = {};
+    for (let schedule of schedules) {
+      const isDisabledFlag = await isDisabled(schedule.time);
+      disabledState[schedule._id] = isDisabledFlag;
+    }
+    setDisabledSchedules(disabledState);
   };
 
-  const currentTime = getCurrentTimeGMTPlus7();
+  const isDisabled = async (scheduleTime) => {
+    try {
+      const response = await fetch(`${SERVER_URL}/check-disabled`, {
+        method: "POST",
+        body: JSON.stringify({ scheduleTime }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.isDisabled;
+      } else {
+        setError(data.error || "Failed to fetch time.");
+      }
+    } catch (error) {
+      setError("An error occurred. Please try again.");
+    }
+  };
 
   useEffect(() => {
     if (!localStorage.getItem("User")) {
@@ -133,6 +140,12 @@ const AddLottery = () => {
     getSchedule();
     getTodaysLotteries();
   }, []);
+
+  useEffect(() => {
+    if (schedules.length > 0) {
+      checkDisabledSchedules();
+    }
+  }, [schedules]);
 
   return (
     <>
@@ -171,23 +184,20 @@ const AddLottery = () => {
                       value={activeSchedule}
                       disabled={lotteryId !== ""}
                     >
-                      <option value="">Select Schedule</option>
+                      <option>Select Schedule</option>
                       {schedules.map((schedule, scheduleIndex) => {
-                        // Disable if the schedule's time has already passed
-                        const isDisabled = new Date(`2024-10-14T${schedule.time}`) < new Date();
                         return (
                           <option
                             value={schedule._id}
                             key={scheduleIndex}
-                            disabled={isDisabled}
+                            disabled={disabledSchedules[schedule._id]}
                           >
-                            {schedule.name} - {schedule.time} - {currentTime}
+                            {schedule.name}({schedule.time})
                           </option>
                         );
                       })}
                     </select>
                   </td>
-
                   <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                     {schedules.find(
                       (schedule) => schedule._id === activeSchedule
@@ -197,9 +207,9 @@ const AddLottery = () => {
                     <input
                       type="date"
                       value={date}
+                      max={today}
                       onChange={(e) => setDate(e.target.value)}
                       disabled={lotteryId !== ""}
-                      max={today}
                     />
                   </td>
                   <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">

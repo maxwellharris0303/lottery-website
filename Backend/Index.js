@@ -234,13 +234,13 @@ app.get("/lotteries", async (req, res) => {
 });
 
 //Get all lotteris
-app.get("/all-lotteries", verifyToken, async (req, res) => {
+app.get("/all-lotteries", async (req, res) => {
   try {
     // Make sure you're populating the correct field names
     const lotteries = await Lottery.find()
       .populate("schedule") // Assuming `schedule` is the field in the Lottery schema
       .populate("user")
-      .sort({ created_at: -1 }); // Assuming there is a `user` field that references User model
+      .sort({ date: -1 }); // Assuming there is a `user` field that references User model
 
     res.status(200).json(lotteries);
   } catch (error) {
@@ -391,6 +391,31 @@ app.get("/logs", verifyToken, async (req, res) => {
   } catch (error) {
     console.error("Error fetching logs:", error);
     res.status(500).json({ error: "Fetching logs failed" });
+  }
+});
+
+app.post("/check-disabled", async (req, res) => {
+  try {
+    const { scheduleTime } = req.body;
+    const localTime = new Date();
+    const localHour = (localTime.getUTCHours() + 7) % 24;
+    const localMin = localTime.getUTCMinutes();
+    const scheduleHour = scheduleTime.split(":")[0];
+    const scheduleMin = scheduleTime.split(":")[1];
+
+    const localTotalMinutes = localHour * 60 + localMin;
+    const scheduleTotalMinutes =
+      parseFloat(scheduleHour) * 60 + parseFloat(scheduleMin);
+
+    // Calculate the absolute difference in minutes
+    const timeDifference =
+      scheduleTotalMinutes > localTotalMinutes
+        ? Math.abs(scheduleTotalMinutes - localTotalMinutes)
+        : 100;
+
+    res.status(200).json({ isDisabled: timeDifference > 5 });
+  } catch (error) {
+    console.log(error);
   }
 });
 
